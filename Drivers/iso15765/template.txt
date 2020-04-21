@@ -1,0 +1,156 @@
+uint8_t Iso15765ReqRespCallback(Iso15765Handle_Type *hnd, uint8_t *data, size_t size)
+{
+
+#define UDS_SID_DIAG_CTRL       0x10 /*DiagSesssionControl*/
+#define UDS_SID_CLEAR_DTC       0x14 /*ClearDiagnosticInformation*/
+#define UDS_SID_DTC_READ        0x19 /*ReadDTCInformationService*/
+#define UDS_SID_DID             0x22 /*ReadDtaByIdentifier*/
+#define UDS_SID_RUTINE_CTRL     0x31 /*RutineControl*/
+#define UDS_SID_REQ_DOWNLOAD    0x34 /*RequestDownload */
+#define UDS_SID_TRANSFER        0x36 /*TransferData*/
+#define UDS_SID_REQ_TRAN_EXIT   0x37 /*RequestTransferExit*/
+#define UDS_SID_TPRESENT        0x3E /*TesterPresent*/
+
+
+#define ROUTINE_ERASE_MEM       0x01
+#define ROUTINE_CHEKSUM         0x02
+
+#define UDS_MODE_PROGRAMMING    0x02
+
+  uint8_t sid = data[0];
+
+  #define DID_TEST    0x0001
+
+  switch(sid)
+  {
+    /*** DiagSesssionControl ***/
+    case UDS_SID_DIAG_CTRL:
+    {
+      DeviceDbgLog("UDS_SID_DIAG_CTRL, Reqtuest Length %d", size);
+      uint8_t diagSessionType = data[1];
+      if(diagSessionType == UDS_MODE_PROGRAMMING)
+      {
+        uint8_t resp[] = {UDS_SID_DIAG_CTRL + 0x40, diagSessionType };
+        Iso15765Response(hnd, resp, sizeof(resp));
+        DeviceDbgLog("Programming mode");
+      }
+      else
+      {
+        Iso15765NegativeResponse(hnd, sid, ISO15765_NRC_CONDITIONS_NOT_CORRECT);
+      }
+      break;
+    }
+    /*** ClearDiagnosticInformation ***/
+    case UDS_SID_CLEAR_DTC:
+    {
+      DeviceDbgLog("UDS_SID_CLEAR_DTC, Reqtuest Length %d", size);
+      uint8_t resp[] = {UDS_SID_CLEAR_DTC + 0x40 };
+      Iso15765Response(hnd, resp, sizeof(resp));
+      break;
+    }
+    /*** ReadDTCInformationService ***/
+    case UDS_SID_DTC_READ:
+    {
+      DeviceDbgLog("UDS_SID_DTC_READ, Reqtuest Length %d", size);
+      uint8_t subFunciton = data[1];
+      uint8_t DTCstatusMask = data[2];
+      if(subFunciton == 0x02  && DTCstatusMask == 0xFF)
+      {
+         //Iso15765Response(hnd, SamplesStoreDtcRead0001, sizeof(SamplesStoreDtcRead0001));
+      }
+      else
+      {
+        Iso15765NegativeResponse(hnd, sid, ISO15765_NRC_CONDITIONS_NOT_CORRECT);
+      }
+      break;
+    }
+    /*** ReadDtaByIdentifier ***/
+    case UDS_SID_DID:
+    {
+      DeviceDbgLog("UDS_SID_DID, Reqtuest Length %d", size);
+      uint8_t did_msb = data[1];
+      uint8_t did_lsb = data[2];
+      uint16_t did =  did_msb << 8 | did_lsb;
+      switch(did)
+      {
+        case DID_TEST:
+        {
+          uint8_t msbValue = 0x00;
+          uint8_t lsbValue = 0x10;
+          uint8_t temp[] = {UDS_SID_DID + 0x40, data[1], data[2], msbValue, lsbValue};
+          Iso15765Response(hnd, temp, sizeof(temp));
+          break;
+        }
+        default:
+        {
+          Iso15765NegativeResponse(hnd, sid, ISO15765_NRC_CONDITIONS_NOT_CORRECT);
+        }
+        break;
+      }
+      break;
+    }
+    /*** RutineControl ***/
+    case UDS_SID_RUTINE_CTRL:
+    {
+      /*--- Flash Erase ---*/
+      if(data[1] == 0x01 && data[2] == 0xFF)
+      {
+        uint8_t routine = data[3];
+        if(routine == ROUTINE_ERASE_MEM)
+        {
+          uint8_t resp[] = {UDS_SID_RUTINE_CTRL + 0x40, routine };
+          Iso15765Response(hnd, resp, sizeof(resp));
+          FlashErase();
+          DeviceDbgLog("Routine request: erase memory complete...");
+        }
+        else if(routine == ROUTINE_CHEKSUM)
+        {
+          uint8_t resp[] = {UDS_SID_DIAG_CTRL + 0x40, routine, 0x00, 0x00 };
+          Iso15765Response(hnd, resp, sizeof(resp));
+          DeviceDbgLog("Routine request: Getchecksum");
+        }
+        else
+        {
+          Iso15765NegativeResponse(hnd, sid, ISO15765_NRC_CONDITIONS_NOT_CORRECT);
+        }
+      }
+      else
+      {
+        Iso15765NegativeResponse(hnd, sid, ISO15765_NRC_CONDITIONS_NOT_CORRECT);
+      }
+      break;
+    }
+    /*** RequestDownload ***/
+    case UDS_SID_REQ_DOWNLOAD:
+    {
+      if(size != 11)
+        Iso15765NegativeResponse(hnd, sid, ISO15765_NRC_CONDITIONS_NOT_CORRECT );
+
+      uint8_t dataFormat = data[1];
+      uint8_t addressLen = data[2];
+      uint32_t memoryAddress = *((uint32_t*)(data + 3));
+      uint32_t memorySize = *((uint32_t*)(data + 7));
+      DeviceDbgLog("dataFormat:%d,addressLen:%d, memoryAddress:%lu,memorySize:%lu,", dataFormat, addressLen, memoryAddress, memorySize);
+      uint8_t resp[] = {UDS_SID_REQ_DOWNLOAD + 0x40 };
+      Iso15765Response(hnd, resp, sizeof(resp));
+      break;
+    }
+
+    /*** Tester Present ***/
+    case UDS_SID_TPRESENT:
+    {
+      uint8_t resp[] = {UDS_SID_TPRESENT + 0x40 };
+      Iso15765Response(hnd, resp, sizeof(resp));
+      DeviceDbgLog("TesterPresent");
+      break;
+    }
+
+
+    /*** Unknown ***/
+    default:
+    {
+       Iso15765NegativeResponse(hnd, sid, ISO15765_NRC_CONDITIONS_NOT_CORRECT );
+    }
+  }
+  return ISO15765_OK;
+}
