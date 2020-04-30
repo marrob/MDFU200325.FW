@@ -1,21 +1,7 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+  *  */
 
 /* USER CODE END Header */
 
@@ -122,12 +108,13 @@ void FeilLedOn(void);
 void FailLedOff(void);
 
 void DebugPrint(char *str);
-void ResetTask(void);
 
 uint8_t GetAddress(void);
 uint8_t GetSpeed(void);
 static void CanInit(CanBusSpeedTypeDef *speed);
-void Reset(void);
+void BootTask(void);
+void ResetTask(void);
+
 uint8_t Iso15765ReqRespCallback(Iso15765Handle_Type *hnd, uint8_t *data, size_t size);
 uint8_t FlashErase(void);
 uint8_t FlashWrite(uint8_t *src, uint8_t *dest, uint32_t size);
@@ -447,6 +434,44 @@ void ResetTask(void)
   }
 }
 
+void BootTask(void)
+{
+  static uint32_t timestamp = 0;
+  static uint8_t counter = DEVICE_WAIT_FOR_CLIENT_SEC;
+  if( HAL_GetTick() - timestamp > 1000 && !Device.Dfu.TesterPresentFlag)
+  {
+    timestamp = HAL_GetTick();
+    counter--;
+
+    DeviceUsrLog("Wait for a client... %d",  counter);
+    if(!counter)
+    {
+      if (((*(__IO uint32_t*)APP_FIRST_PAGE_ADDRESS) & 0x2FFE0000 ) == 0x20000000)
+      {
+        DeviceDbgLog("I found a valid firmware!");
+
+        //IWatchdogDeInit();
+        HAL_DeInit();
+        HAL_UART_MspDeInit(&huart1);
+        HAL_CAN_MspDeInit(&hcan);
+
+        uint32_t appAddress = *(__IO uint32_t*) (APP_FIRST_PAGE_ADDRESS + 4);
+        /* Jump to user application */
+        pFunction pApp = (pFunction) appAddress;
+        /* Initialize user application's Stack Pointer */
+        __set_MSP(*(__IO uint32_t*) APP_FIRST_PAGE_ADDRESS);
+
+        pApp();
+      }
+      else
+      {
+        DeviceUsrLog("There is nothing");
+        counter = DEVICE_WAIT_FOR_CLIENT_SEC;
+      }
+    }
+  }
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -490,11 +515,7 @@ int main(void)
   printf(VT100_ATTR_RESET);
 #endif
 
-  DeviceUsrLog("Name:%s", DEVICE_NAME);
-  DeviceUsrLog("Version:%04X", DEVICE_FW);
-  DeviceUsrLog("HAL_RCC_GetPCLK2Freq: %dHz",(int)HAL_RCC_GetPCLK2Freq());
-  DeviceUsrLog("HAL_RCC_GetPCLK1Freq: %dHz",(int)HAL_RCC_GetPCLK1Freq());
-  DeviceUsrLog("SystemCoreClock: %dHz",(int)SystemCoreClock);
+  DeviceUsrLog("Manufacturer:%s, Name:%s, Version:%04X",DEVICE_MNF, DEVICE_NAME, DEVICE_FW);  DeviceUsrLog("HAL_RCC_GetPCLK2Freq: %dHz",(int)HAL_RCC_GetPCLK2Freq());
 
   /*** Leds ***/
   hLed.pLedTable = LedList;
@@ -510,14 +531,11 @@ int main(void)
 
 
   /*** Defaults ***/
-  Reset();
   Device.Address = GetAddress();
-  DeviceUsrLog("Address: %d", Device.Address);
   Device.Version = DEVICE_FW;
   Device.CanSpeed = &CanSpeeds[GetSpeed()];
-  DeviceUsrLog("CAN Baudrate: %lu Baud", CanSpeeds[GetSpeed()].Baud);
-  DeviceUsrLog("ECU DFU Rx address: 0x%04X", UDS_RX_ADDR | Device.Address);
-  DeviceUsrLog("ECU DFU Tx address: 0x%04X", UDS_TX_ADDR | Device.Address);
+  DeviceUsrLog("CAN Address: %d, Baudrate: %lu Baud", Device.Address, CanSpeeds[GetSpeed()].Baud);
+  DeviceUsrLog("ECU DFU Rx address: 0x%04X, Tx address: 0x%04X", UDS_RX_ADDR | Device.Address,UDS_TX_ADDR | Device.Address);
   CanInit(Device.CanSpeed);
 
   Device.Dfu.HardResetFlag = 0;
@@ -531,49 +549,12 @@ int main(void)
     LiveLedTask(&hLiveLed);
     LedTask(&hLed);
     Iso15765Task(&Device.Transport);
+    BootTask();
     ResetTask();
     /* USER CODE END WHILE */
-
-    static uint32_t timestamp = 0;
-    static uint8_t counter = DEVICE_WAIT_FOR_CLIENT_SEC;
-    if( HAL_GetTick() - timestamp > 1000 && !Device.Dfu.TesterPresentFlag)
-    {
-      timestamp = HAL_GetTick();
-      counter--;
-
-      DeviceUsrLog("Wait for a client... %d",  counter);
-      if(!counter)
-      {
-        if (((*(__IO uint32_t*)APP_FIRST_PAGE_ADDRESS) & 0x2FFE0000 ) == 0x20000000)
-        {
-          DeviceDbgLog("I found a valid firmware!");
-
-          //IWatchdogDeInit();
-          HAL_DeInit();
-          HAL_UART_MspDeInit(&huart1);
-          HAL_CAN_MspDeInit(&hcan);
-
-          uint32_t appAddress = *(__IO uint32_t*) (APP_FIRST_PAGE_ADDRESS + 4);
-          /* Jump to user application */
-          pFunction pApp = (pFunction) appAddress;
-          /* Initialize user application's Stack Pointer */
-          __set_MSP(*(__IO uint32_t*) APP_FIRST_PAGE_ADDRESS);
-
-          pApp();
-        }
-        else
-        {
-          DeviceUsrLog("There is nothing");
-          counter = DEVICE_WAIT_FOR_CLIENT_SEC;
-        }
-      }
-
-
-
     }
     /* USER CODE BEGIN 3 */
 
-  }
   /* USER CODE END 3 */
 }
 
@@ -886,11 +867,6 @@ uint8_t GetSpeed(void)
   (HAL_GPIO_ReadPin(DIP3_GPIO_Port,DIP1_Pin) == GPIO_PIN_SET)? (val&=~0x01): (val|=0x01);
   (HAL_GPIO_ReadPin(DIP4_GPIO_Port,DIP2_Pin) == GPIO_PIN_SET)? (val &=~0x02):(val|=0x02);
   return val;
-}
-
-void Reset(void)
-{
-  Device.Counters.CanRxFrames = 0;
 }
 
 
