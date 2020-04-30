@@ -554,7 +554,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
+  }
   /* USER CODE END 3 */
 }
 
@@ -819,11 +819,6 @@ uint16_t CalcCrc16Ansi(uint16_t initValue, const void* address, size_t size)
 int _write(int file, char *ptr, int len)
 {
   HAL_UART_Transmit(&huart1, (uint8_t*)ptr, len, 100);
-  /*
-  int i=0;
-  for(i=0 ; i<len ; i++)
-    ITM_Sen dChar((*ptr++));
-  */
   return len;
 }
 

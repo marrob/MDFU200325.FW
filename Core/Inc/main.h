@@ -102,7 +102,7 @@ void Error_Handler(void);
 #define UDS_RX_ADDR         0x600
 #define UDS_TX_ADDR         0x700
 #define UDS_EXT_ADDR        0
-#define DEVICE_WAIT_FOR_CLIENT_SEC  4
+#define DEVICE_WAIT_FOR_CLIENT_SEC  5
 
 /*--- Flahs ---*/
 //#define FLASH_PAGE_SIZE           0x800
