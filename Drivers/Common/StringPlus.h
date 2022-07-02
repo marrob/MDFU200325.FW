@@ -1,6 +1,6 @@
 /******************** (C) COPYRIGHT 2013 marrob Design *************************
 * File Name          : StringPlus.h
-* Author             : Margit Róbert
+* Author             : Margit Rï¿½bert
 * Date First Issued  : 25/06/2013
 * Description        : String...
 ********************************************************************************/
@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-char *StringPlusTrimWhitespace(char *str);
 char *StringPlusDataToHexaString(void* data, char *buffer, size_t size);
 char *StringPlusDataToLimitedHexaString(void* data, int limit, char *buffer, size_t size);
 char *StringPlusToUpper(char* str);
