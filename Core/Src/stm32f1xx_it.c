@@ -43,7 +43,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-LedHandle_Type        hLed;
+extern LedHandle_Type        hLed;
 
 /* USER CODE END PV */
 
