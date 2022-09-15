@@ -97,6 +97,7 @@ void Error_Handler(void);
 #define DIP7_GPIO_Port GPIOB
 #define DIP8_Pin GPIO_PIN_2
 #define DIP8_GPIO_Port GPIOB
+void   MX_CAN_Init(void);
 /* USER CODE BEGIN Private defines */
 
 #define UDS_RX_ADDR         0x600
@@ -114,7 +115,7 @@ void Error_Handler(void);
 /* Generic  -------------------------------------------------------------------*/
 #define DEVICE_NAME             "MDFU200325" /*!< Eszk�z neve pl.:MDIO130204*/
 #define DEVICE_NAME_SIZE        sizeof(DEVICE_NAME)
-#define DEVICE_FW               0x0001        /*Verziszam: 0x0302:V03.02 */
+#define DEVICE_FW               0x0002        /*Verziszam: 0x0302:V03.02 */
 #define DEVICE_FW_SIZE          sizeof(DEVICE_FW)
 #define DEVICE_PCB              "00"
 #define DEVICE_PCB_SIZE         sizeof(DEVICE_PCB)
@@ -145,5 +146,3 @@ void Error_Handler(void);
 #endif
 
 #endif /* __MAIN_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
