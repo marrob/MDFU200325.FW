@@ -71,7 +71,7 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
-void   MX_CAN_Init(void);
+void MX_CAN_Init(void);
 
 /* USER CODE BEGIN EFP */
 
@@ -116,7 +116,7 @@ void   MX_CAN_Init(void);
 /* Generic  -------------------------------------------------------------------*/
 #define DEVICE_NAME             "MALT191105-BOOTLOADER.FW"
 #define DEVICE_NAME_SIZE        sizeof(DEVICE_NAME)
-#define DEVICE_FW               0x0003
+#define DEVICE_FW               0x0004
 #define DEVICE_FW_SIZE          sizeof(DEVICE_FW)
 #define DEVICE_PCB              "00"
 #define DEVICE_PCB_SIZE         sizeof(DEVICE_PCB)
